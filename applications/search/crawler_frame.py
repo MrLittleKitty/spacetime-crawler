@@ -1,8 +1,10 @@
 import logging
-from datamodel.search.EawolfeSantiadmTevinl1_datamodel import EawolfeSantiadmTevinl1Link, OneEawolfeSantiadmTevinl1UnProcessedLink
+import sys
+from datamodel.search.EawolfeSantiadmTevinl1_datamodel import EawolfeSantiadmTevinl1Link, \
+    OneEawolfeSantiadmTevinl1UnProcessedLink
 from spacetime.client.IApplication import IApplication
 from spacetime.client.declarations import Producer, GetterSetter, Getter
-from lxml import html,etree
+from lxml import html, etree
 import re, os
 from time import time
 from uuid import uuid4
@@ -13,6 +15,7 @@ from uuid import uuid4
 logger = logging.getLogger(__name__)
 LOG_HEADER = "[CRAWLER]"
 
+
 @Producer(EawolfeSantiadmTevinl1Link)
 @GetterSetter(OneEawolfeSantiadmTevinl1UnProcessedLink)
 class CrawlerFrame(IApplication):
@@ -21,7 +24,6 @@ class CrawlerFrame(IApplication):
     def __init__(self, frame):
         self.app_id = "EawolfeSantiadmTevinl1"
         self.frame = frame
-
 
     def initialize(self):
         self.count = 0
@@ -52,7 +54,8 @@ class CrawlerFrame(IApplication):
         print (
             "Time time spent this session: ",
             time() - self.starttime, " seconds.")
-    
+
+
 def extract_next_links(rawDataObj):
     outputLinks = []
     '''
@@ -65,7 +68,18 @@ def extract_next_links(rawDataObj):
     
     Suggested library: lxml
     '''
+    if not rawDataObj.content is None:
+        try:
+            doc = html.fromstring(rawDataObj.content)
+            doc.make_links_absolute(rawDataObj.url)
+            for href in doc.iterlinks():
+                outputLinks.append(href[2])
+        except:
+            e = sys.exc_info()[0]
+            print("Error: %s" % e)
+
     return outputLinks
+
 
 def is_valid(url):
     '''
@@ -79,13 +93,12 @@ def is_valid(url):
         return False
     try:
         return ".ics.uci.edu" in parsed.hostname \
-            and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4"\
-            + "|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf" \
-            + "|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso|epub|dll|cnf|tgz|sha1" \
-            + "|thmx|mso|arff|rtf|jar|csv"\
-            + "|rm|smil|wmv|swf|wma|zip|rar|gz|pdf)$", parsed.path.lower())
+               and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
+                                + "|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf" \
+                                + "|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso|epub|dll|cnf|tgz|sha1" \
+                                + "|thmx|mso|arff|rtf|jar|csv" \
+                                + "|rm|smil|wmv|swf|wma|zip|rar|gz|pdf)$", parsed.path.lower())
 
     except TypeError:
         print ("TypeError for ", parsed)
         return False
-
