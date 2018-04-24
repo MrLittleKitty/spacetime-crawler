@@ -3,6 +3,7 @@ import logging.handlers
 import os
 import sys
 import argparse
+import time
 import uuid
 
 sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -22,7 +23,7 @@ LOG_HEADER = "[CHECKFRONTIER]"
 class CheckFrontierFrame(IApplication):
 
     def __init__(self, frame):
-        self.starttime = time()
+        self.starttime = time.time()
         self.app_id = "EawolfeSantiadmTevinl1"
         self.frame = frame
 
