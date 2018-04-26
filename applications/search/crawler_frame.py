@@ -56,6 +56,11 @@ class CrawlerFrame(IApplication):
             time() - self.starttime, " seconds.")
 
 
+# Regex to validate absolute URLS was pulled from this gist: https://gist.github.com/uogbuji/705383
+URL_REGEX = re.compile(
+    ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
+
+
 def extract_next_links(rawDataObj):
     outputLinks = []
     '''
@@ -68,15 +73,19 @@ def extract_next_links(rawDataObj):
     
     Suggested library: lxml
     '''
-    if not rawDataObj.content is None:
+    if rawDataObj.content is not None and rawDataObj.content is not "":
         try:
+            # Attempt to parse the content as an html file
             doc = html.fromstring(rawDataObj.content)
             doc.make_links_absolute(rawDataObj.url)
             for href in doc.iterlinks():
-                outputLinks.append(href[2])
+                if URL_REGEX.match(href[2]):  # Make sure that any link is an absolute address
+                    outputLinks.append(href[2])
         except:
-            e = sys.exc_info()[0]
-            print("Error: %s" % e)
+            # Treat the raw content as a plain text and search for urls in it
+            links = re.findall(URL_REGEX, rawDataObj.content)
+            for link in links:
+                outputLinks.append(link)
 
     return outputLinks
 
@@ -89,7 +98,7 @@ def is_valid(url):
     This is a great place to filter out crawler traps.
     '''
     parsed = urlparse(url)
-    if parsed.scheme not in set(["http", "https"]):
+    if parsed.scheme not in {"http", "https"}:
         return False
     try:
         return ".ics.uci.edu" in parsed.hostname \
