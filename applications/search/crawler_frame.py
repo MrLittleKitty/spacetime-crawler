@@ -115,6 +115,7 @@ def extract_next_links(rawDataObj):
 
 AFG_PAGE = re.compile(r'afg[0-9]+_page_id')
 REPLY_TO = re.compile(r'replytocom=[0-9]+')
+BAD_PAGES = re.compile(r'\.edu\/prospective\/([a-z]+)\/admissions\/(financial\-aid|application-tips)')
 
 
 def processLink(url, parsed):
@@ -151,7 +152,16 @@ def is_valid(url):
         if AFG_PAGE.search(parsed.query):
             return False
 
+        # Another query parameter trap
         if 'replytocom=' in parsed.query:
+            return False
+
+        # This one page gets us stuck in an infinite loop
+        if 'evoke.ics.uci.edu' in url and 'page_id=' in url:
+            return False
+
+        # This one removes specific pages that are crawler traps
+        if BAD_PAGES.search(url):
             return False
 
         # Word-press JSON apis are a black hole, filter them out
