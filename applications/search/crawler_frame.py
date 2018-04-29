@@ -73,21 +73,38 @@ def extract_next_links(rawDataObj):
     
     Suggested library: lxml
     '''
+    url = None
+    if rawDataObj.is_redirected:
+        url = rawDataObj.final_url
+    else:
+        url = rawDataObj.url
+
     if rawDataObj.content is not None and rawDataObj.content is not "":
         try:
             # Attempt to parse the content as an html file
             doc = html.fromstring(rawDataObj.content)
-            doc.make_links_absolute(rawDataObj.url)
+            doc.make_links_absolute(url)
             for href in doc.iterlinks():
                 if URL_REGEX.match(href[2]):  # Make sure that any link is an absolute address
-                    outputLinks.append(href[2])
+                    outputLinks.append(processLink(href[2]))
         except:
             # Treat the raw content as a plain text and search for urls in it
             links = re.findall(URL_REGEX, rawDataObj.content)
             for link in links:
-                outputLinks.append(link)
+                outputLinks.append(processLink(link))
 
     return outputLinks
+
+
+AFG_PAGE = re.compile(r'afg[0-9]+_page_id')
+
+
+def processLink(url):
+    # Remove all the query parameters for links from wics that have the AFG page parameter
+    if AFG_PAGE.search(url):
+        return url[0:url.find('?')]
+
+    return url
 
 
 def is_valid(url):
@@ -101,12 +118,23 @@ def is_valid(url):
     if parsed.scheme not in {"http", "https"}:
         return False
     try:
-        return ".ics.uci.edu" in parsed.hostname \
-               and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
-                                + "|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf" \
-                                + "|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso|epub|dll|cnf|tgz|sha1" \
-                                + "|thmx|mso|arff|rtf|jar|csv" \
-                                + "|rm|smil|wmv|swf|wma|zip|rar|gz|pdf)$", parsed.path.lower())
+        if ".ics.uci.edu" not in parsed.hostname or "calendar.ics.uci.edu" in parsed.hostname \
+                or re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
+                            + "|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf" \
+                            + "|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso|epub|dll|cnf|tgz|sha1" \
+                            + "|thmx|mso|arff|rtf|jar|csv" \
+                            + "|rm|smil|wmv|swf|wma|zip|rar|gz|pdf)$", parsed.path.lower()):
+            return False
+
+        # Stop crawler trap on the WICS site with the afg_page_id query parameter
+        if AFG_PAGE.search(parsed.query):
+            return False
+
+        # Word-press JSON apis are a black hole, filter them out
+        if 'wp-json' in parsed.path:
+            return False
+
+        return True
 
     except TypeError:
         print ("TypeError for ", parsed)
