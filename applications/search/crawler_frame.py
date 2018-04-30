@@ -68,6 +68,8 @@ domainMap = defaultdict(lambda: 0)
 mostLinks = 0
 page = ""
 
+handled = 0
+
 
 def extract_next_links(rawDataObj):
     outputLinks = []
@@ -104,10 +106,23 @@ def extract_next_links(rawDataObj):
             for link in links:
                 outputLinks.append(processLink(link, parsed))
 
+    global handled
     global mostLinks
+    global page
+    if handled > 3000:
+        file = open('output.txt', 'w')
+        for domain, count in domainMap.items():
+            file.write(domain + '.ics.uci.edu links: ' + str(count) + '\n')
+        file.write('\n')
+        file.write("The page with the most links is: '" + str(page) + "' with " + str(mostLinks) + ' links')
+        file.close()
+        print('Saved analytics to a file!')
+        exit(0)
+
+    handled += 1
+
     if len(outputLinks) > mostLinks:
         mostLinks = len(outputLinks)
-        global page
         page = url
 
     return outputLinks
@@ -115,7 +130,6 @@ def extract_next_links(rawDataObj):
 
 AFG_PAGE = re.compile(r'afg[0-9]+_page_id')
 REPLY_TO = re.compile(r'replytocom=[0-9]+')
-BAD_PAGES = re.compile(r'\.edu\/prospective\/([a-z]+)\/admissions\/(financial\-aid|application-tips)')
 
 
 def processLink(url, parsed):
@@ -141,6 +155,7 @@ def is_valid(url):
         return False
     try:
         if ".ics.uci.edu" not in parsed.hostname or "calendar.ics.uci.edu" in parsed.hostname \
+                or 'ganglia.ics.uci.edu' in parsed.hostname \
                 or re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
                             + "|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf" \
                             + "|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso|epub|dll|cnf|tgz|sha1" \
@@ -158,10 +173,6 @@ def is_valid(url):
 
         # This one page gets us stuck in an infinite loop
         if 'evoke.ics.uci.edu' in url and 'page_id=' in url:
-            return False
-
-        # This one removes specific pages that are crawler traps
-        if BAD_PAGES.search(url):
             return False
 
         # Word-press JSON apis are a black hole, filter them out
