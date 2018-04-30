@@ -58,6 +58,14 @@ class CrawlerFrame(IApplication):
             "Time time spent this session: ",
             time() - self.starttime, " seconds.")
 
+        file = open('output2.txt', 'w')
+        for domain, count in domainMap.items():
+            file.write(domain + '.ics.uci.edu links: ' + str(count) + '\n')
+        file.write('\n')
+        file.write("The page with the most links is: '" + str(page) + "' with " + str(mostLinks) + ' links')
+        file.close()
+        print('Saved emergency analytics to a file!')
+
 
 # Regex to validate absolute URLS was pulled from this gist: https://gist.github.com/uogbuji/705383
 URL_REGEX = re.compile(
@@ -110,7 +118,7 @@ def extract_next_links(rawDataObj):
     global mostLinks
     global page
     if handled > 3000:
-        file = open('output.txt', 'w')
+        file = open('output1.txt', 'w')
         for domain, count in domainMap.items():
             file.write(domain + '.ics.uci.edu links: ' + str(count) + '\n')
         file.write('\n')
