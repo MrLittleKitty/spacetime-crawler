@@ -46,17 +46,20 @@ class CrawlerFrame(IApplication):
 
     def download_links(self, unprocessed_links):
         for link in unprocessed_links:
-            print "Got a link to download:", link.full_url
-            downloaded = link.download()
-            links = extract_next_links(downloaded)
-            for l in links:
-                if is_valid(l):
-                    self.frame.add(EawolfeSantiadmTevinl1Link(l))
+            try:
+                print "Got a link to download:", link.full_url
+                downloaded = link.download()
+                links = extract_next_links(downloaded)
+                for l in links:
+                    if is_valid(l):
+                        self.frame.add(EawolfeSantiadmTevinl1Link(l))
+            except:
+                pass
 
     def shutdown(self):
-        print (
-            "Time time spent this session: ",
-            time() - self.starttime, " seconds.")
+        # print (
+        #     "Time time spent this session: ",
+        #     time() - self.starttime, " seconds.")
 
         file = open('output2.txt', 'w')
         for domain, count in domainMap.items():
@@ -126,6 +129,7 @@ def extract_next_links(rawDataObj):
         file.close()
         print('Saved analytics to a file!')
         exit(0)
+        exit(1)
 
     handled += 1
 
