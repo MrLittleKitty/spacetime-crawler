@@ -74,8 +74,10 @@ class CrawlerFrame(IApplication):
 URL_REGEX = re.compile(
     ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
 
+# Keeps track of all the sub domains and how many links we got from there
 domainMap = defaultdict(lambda: 0)
 
+# What page has the most links on it
 mostLinks = 0
 page = ""
 
@@ -93,12 +95,14 @@ def extract_next_links(rawDataObj):
     The frontier takes care of that.
     '''
 
+    # If we were redirected then the url is the final url
     url = None
     if rawDataObj.is_redirected:
         url = rawDataObj.final_url
     else:
         url = rawDataObj.url
 
+    # Parse the url and increase the count from the url's subdomain map
     parsed = urlparse(url)
     domain = parsed.hostname[0:parsed.hostname.find('.ics.uci.edu')]
     domainMap[domain] = domainMap[domain] + 1
@@ -120,6 +124,7 @@ def extract_next_links(rawDataObj):
     global handled
     global mostLinks
     global page
+    # Stop the crawler when we get to 3000 links and save the analytics to a file
     if handled > 3000:
         file = open('output1.txt', 'w')
         for domain, count in domainMap.items():
@@ -128,11 +133,12 @@ def extract_next_links(rawDataObj):
         file.write("The page with the most links is: '" + str(page) + "' with " + str(mostLinks) + ' links')
         file.close()
         print('Saved analytics to a file!')
-        exit(0)
-        exit(1)
+        exit(0)  # Stop the program
+        exit(1)  # Sometimes the program doesn't stop so try and stop it again
 
     handled += 1
 
+    # Update which page has the most links
     if len(outputLinks) > mostLinks:
         mostLinks = len(outputLinks)
         page = url
@@ -144,11 +150,13 @@ AFG_PAGE = re.compile(r'afg[0-9]+_page_id')
 REPLY_TO = re.compile(r'replytocom=[0-9]+')
 
 
+# Process some crawler trap links to try and turn them in to real links to make sure we visit them
 def processLink(url, parsed):
     # Remove all the query parameters for links from wics that have the AFG page parameter
     if AFG_PAGE.search(url):
         return url[0:url.find('?')]
 
+    # Remove this crawler trap query parameter to hopefully make the link valid
     if 'replytocom=' in parsed.query:
         return re.sub(REPLY_TO, '', url)
 
@@ -166,6 +174,7 @@ def is_valid(url):
     if parsed.scheme not in {"http", "https"}:
         return False
     try:
+        # Links must be from ICS, cant be from the calendar, and can't be from the ganglia crawler trap
         if ".ics.uci.edu" not in parsed.hostname or "calendar.ics.uci.edu" in parsed.hostname \
                 or 'ganglia.ics.uci.edu' in parsed.hostname \
                 or re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
